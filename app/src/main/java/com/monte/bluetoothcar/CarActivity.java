@@ -96,6 +96,10 @@ public class CarActivity extends Activity {
                 Log.e(":)", message);               //output this on Logcat
                 sendResponse(message);              //send through bluetooth
                 break;
+            case MotionEvent.ACTION_UP:
+                message = "x0.00 y0.00";
+                sendResponse(message);              //send through bluetooth
+                break;
         }
         return super.onTouchEvent(event);
     }
