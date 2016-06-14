@@ -3,18 +3,15 @@ package com.monte.bluetoothcar;
 import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
-import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ActivityInfo;
-import android.hardware.Sensor;
-import android.hardware.SensorEvent;
-import android.hardware.SensorEventListener;
-import android.hardware.SensorManager;
 import android.os.Bundle;
+import android.os.Handler;
 import android.util.Log;
 import android.view.View;
+import android.widget.Button;
+import android.widget.SeekBar;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import java.util.UUID;
 
@@ -23,7 +20,7 @@ import bluetoothStuff.*;
 /**
  * Created by Monte on 14/06/16.
  */
-public class GyroCarActivity extends Activity implements SensorEventListener{
+public class GyroCarActivity extends Activity {//implements SensorEventListener{
 
     public BluetoothDevice device;                          //device to be connected to
     public ConnectThread connectThread;                     //connection thread
@@ -33,8 +30,10 @@ public class GyroCarActivity extends Activity implements SensorEventListener{
     private TextView pitchText;
     private TextView rollText;
 
-    private SensorManager mSensorManager;   //sensorManager object
-    private Sensor rSensor; //rotation vector sensor
+    private RotationValues myRotations;     //*** needed
+
+    private SeekBar speedSeekBar;
+    private SeekBar angleSeekBar;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -43,14 +42,95 @@ public class GyroCarActivity extends Activity implements SensorEventListener{
         this.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE); //always keep orientation in portrait
         initialiseBluetooth();                              //Bluetooth stuff
         initialiseViews();
-        initialiseSensors();
+        myRotations = new RotationValues(getApplicationContext());      //*** needed
     }
 
+    private int direction = 0;
+    private int speed = 0;  //0 - 255
+    private int angle = 0;  //90 - 135
+
+    private void initialiseSender (){
+        final Handler h = new Handler();
+        final int delay = 20; //milliseconds
+
+        h.postDelayed(new Runnable(){
+            public void run(){
+                //do something
+
+                yawText.setText(String.format("%.2f ˚", myRotations.getYaw()));
+                pitchText.setText(String.format("%.2f ˚", myRotations.getPitch()));
+                rollText.setText(String.format("%.2f ˚", myRotations.getRoll()));
+
+                // Set the speed and the direction (forward/backward)
+                float positionY = myRotations.getRoll();    //280 - middle; 235 - 280 - 325
+                float positionX = myRotations.getPitch();   //0 - middle;   45 - 0 - 315
+
+                if (positionY >= 235 && positionY <= 325){
+                    if (positionY >= 280.0)
+                        direction = 1;
+                    else
+                        direction = 0;
+                    speed = (int) (Math.abs(positionY - 280) / 45.0 * 255.0);
+                } else {
+                    speed = 255;
+                }
+
+                // Set the angle
+                if (positionX <= 90){
+                    if (positionX <= 45)    //90˚ - 112.5˚
+                        angle = (int) (112.5 - positionX/2);
+                    else
+                        angle = 90;
+                }
+
+                if (positionX >= 270){
+                    if (positionX >= 315)
+                        angle = (int) (135 - (positionX - 315)/2);  //112.5˚ - 135˚
+                    else
+                        angle = 135;
+                }
+
+
+                speedSeekBar.setProgress(speed);
+                angleSeekBar.setProgress(angle - 90);
+
+                // Set direction: 1 forward, 0 backward
+                int val = 0;
+                if (direction==1) {
+                    val |= 0x80;
+                }
+
+                // Assign 3 bits to set angle
+                val |= (((135-angle)/6) << 4) ;
+
+                // Assign 4 bits to set speed
+                if (speed >= 60) {
+//                    speed -= 60;
+                    val |= (speed-60) / 12;
+                }
+                else {
+                    val = val & 0xf0;
+                }
+                
+                if (enableCar) {
+                    if (connectThread.getSocket() == null)
+                        finish();
+                    sendResponse(val);
+                }
+
+//                Log.e("values", "pitch= " + myRotations.getPitch() + " roll= " + myRotations.getRoll());
+                h.postDelayed(this, delay);
+            }
+        }, delay);
+    }
 
     private void initialiseViews(){
         yawText = (TextView) findViewById(R.id.yawText);
         pitchText = (TextView) findViewById(R.id.pitchText);
         rollText = (TextView) findViewById(R.id.rollText);
+
+        speedSeekBar = (SeekBar) findViewById(R.id.speedSeekBar);
+        angleSeekBar= (SeekBar) findViewById(R.id.angleSeekBar);
     }
 
     //Initialise bluetooth stuff
@@ -62,28 +142,24 @@ public class GyroCarActivity extends Activity implements SensorEventListener{
         Log.e("Device Address is", deviceAddress);
     }
 
-    private void initialiseSensors (){
-        mSensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);  //Sensor manager service
-        rSensor = mSensorManager.getDefaultSensor(Sensor.TYPE_GAME_ROTATION_VECTOR);//used for showing the rotation on each axis
-    }
-
     //Need to start connection thread again when awake
+    int i = 0;
     @Override
     protected void onResume() {
         super.onResume();
-
-        mSensorManager.registerListener(this, rSensor, SensorManager.SENSOR_DELAY_GAME);
-
         UUID deviceUUID = device.getUuids()[0].getUuid();
         Log.e("UUID", deviceUUID + "");
         connectThread = new ConnectThread(device, deviceUUID);
         connectThread.start();
+
+        myRotations.registerListener();     //*** this needed
+//        initialiseSender();                 //*** this is used to repeatedly send data
     }
 
     @Override
     protected void onPause() {
-        mSensorManager.unregisterListener(this);
         super.onPause();
+        myRotations.unregisterListener();
     }
 
     //stop connection thread to save battery when application closed
@@ -92,7 +168,7 @@ public class GyroCarActivity extends Activity implements SensorEventListener{
         super.onStop();
         if (mmManagegedConnection != null)
             mmManagegedConnection.cancel();
-        if (connectThread != null)
+        if (connectThread.getSocket() != null)
             connectThread.cancel();
         try {
             connectThread.join();
@@ -100,80 +176,32 @@ public class GyroCarActivity extends Activity implements SensorEventListener{
             e.printStackTrace();
         }
     }
-
+    
     //sends response through bluetooth, firstly gets a socket
-    public void sendResponse(String sendWord) {
+    public void sendResponse(int sendInt) {
+//        Log.e("Send word ", "Int: " + sendInt + ", Hex: 0x" + Integer.toHexString(sendInt));
         if (connectThread.getSocket() != null && connectThread.getSocket().isConnected()) { //check if device is still connected
             if (mmManagegedConnection == null) {
                 mmManagegedConnection = new ManageConnectedThread(connectThread.getSocket());   //get bluetooth socket
             }
-            mmManagegedConnection.write(sendWord);                                          //send the work
+            mmManagegedConnection.write(sendInt);
+            Log.e("Send word ", "Int: " + sendInt + ", Hex: 0x" + Integer.toHexString(sendInt));//send the work
         }
         //mmManagegedConnection.write(string.getBytes(Charset.forName("UTF-8")));
     }
 
-    private void calculateRotationOrientation (){
-        float[] rotationMatrix = new float[16];
-        float[] orientation = new float[3];
-        SensorManager.getRotationMatrixFromVector(rotationMatrix, rawRotationValues);   //calculate the rotation matrix for the rotation vector
-        SensorManager.getOrientation(rotationMatrix, orientation);  //get orientation from the rotation matrix
+    private boolean enableCar = false;
+    public void startCar (View view){
+        sendResponse(23);
 
-        rawYaw     = ((float) mod(orientation[0] + TWO_PI,TWO_PI) );   //get radians in the correct region
-        rawPitch = ((float) mod(orientation[1] + TWO_PI,TWO_PI) );
-        rawRoll  = ((float) mod(orientation[2] + TWO_PI,TWO_PI) );
-
-        float yaw   = rawYaw * 180/PI + yawOffset;
-        float pitch = rawPitch * 180/PI + pitchOffset;    //in degrees
-        float roll  = rawRoll * 180/PI + rollOffset;
-
-
-        yawText.setText(String.format("%.2f ˚", yaw));
-        pitchText.setText(String.format("%.2f ˚", pitch));
-        rollText.setText(String.format("%.2f ˚", roll));
-//        Log.e("degrees:", "yaw= " + yaw + " pitch= " + pitch + " roll= " + roll);
-    }
-    private double mod(double a, double b){ //functions calculates the mod
-        return a % b;
-    }
-
-    float rawYaw = 0.0f;
-    float rawPitch = 0.0f;
-    float rawRoll = 0.0f;
-    private final static float PI = (float) Math.PI;
-    private final static float TWO_PI = PI*2;
-
-    float yawOffset = 0.0f;
-    float pitchOffset = 0.0f;
-    float rollOffset = 0.0f;
-
-    // method CalibrateGyro is called when click the calibrate button
-    public void calibrateRotationSensors (View view){
-        float[] rotationMatrix = new float[16];
-        float[] orientation = new float[3];
-        SensorManager.getRotationMatrixFromVector(rotationMatrix, rawRotationValues);   //calculate the rotation matrix for the rotation vector
-        SensorManager.getOrientation(rotationMatrix, orientation);  //get orientation from the rotation matrix
-
-
-        yawOffset = ((float) mod(orientation[0] + TWO_PI,TWO_PI) - rawYaw)*180/PI;
-        pitchOffset = ((float) mod(orientation[1] + TWO_PI,TWO_PI) - rawPitch)*180/PI;
-        rollOffset = ((float) mod(orientation[2] + TWO_PI,TWO_PI) - rawRoll)*180/PI;
-//        Log.e("offset=", offset + "");                                                          // initialisation
-//        Log.e ("mag degree=", Math.toDegrees(Values[0])+"");
-        Toast.makeText(this, "Hold the phone in car non-moving position...", Toast.LENGTH_SHORT).show();
-    }
-
-    float [] rawRotationValues;
-    @Override
-    public void onSensorChanged(SensorEvent event) {
-        switch (event.sensor.getType()){
-            case Sensor.TYPE_GAME_ROTATION_VECTOR:
-                rawRotationValues = event.values.clone();
-                calculateRotationOrientation(); //calculate the degrees for all rotations
+        if (enableCar){
+            ((Button) view).setText("START");
+            enableCar = false;
+        } else {
+            ((Button) view).setText("STOP");
+            enableCar = true;
         }
-    }
-
-    @Override
-    public void onAccuracyChanged(Sensor sensor, int accuracy) {
-
+            
+//        Log.e("values", "pitch= " + myRotations.getPitch() + " roll= " + myRotations.getRoll());
     }
 }

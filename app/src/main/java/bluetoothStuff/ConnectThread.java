@@ -13,7 +13,7 @@ import java.util.UUID;
  * Created by Monte on 6/3/2015.
  */
 public class ConnectThread extends Thread {
-    private final BluetoothSocket mmSocket;
+    private BluetoothSocket mmSocket;
 
     public BluetoothSocket getSocket() {
         return mmSocket;
@@ -25,7 +25,6 @@ public class ConnectThread extends Thread {
     public ConnectThread(BluetoothDevice device, UUID MY_UUID) {
         // Use a temporary object that is later assigned to mmSocket,
         // because mmSocket is final
-        Log.e("Thread created", "one!");
 
         BluetoothSocket tmp = null;
         mmDevice = device;
@@ -39,6 +38,7 @@ public class ConnectThread extends Thread {
     }
 
     public void run() {
+        Log.e("Thread created", "one!");
         // Cancel discovery because it will slow down the connection
         BluetoothAdapter.getDefaultAdapter().cancelDiscovery();
 
@@ -48,9 +48,12 @@ public class ConnectThread extends Thread {
             mmSocket.connect();
         } catch (IOException connectException) {
             // Unable to connect; close the socket and get out
+            System.out.println(connectException);
             try {
                 mmSocket.close();
+                mmSocket = null;
             } catch (IOException closeException) { }
+            Log.e("connection", "Failed!");
             return;
         }
         // Do work to manage the connection (in a separate thread)

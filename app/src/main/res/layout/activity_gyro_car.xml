@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:orientation="vertical" android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:orientation="vertical"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#B48842">
 
 
     <LinearLayout
@@ -70,11 +72,57 @@
         </LinearLayout>
     </LinearLayout>
     <Button
+        android:id="@+id/startButton"
         android:layout_width="200dp"
         android:layout_height="wrap_content"
         android:layout_gravity="center"
         android:layout_marginTop="20dp"
         android:background="@color/colorPrimary"
-        android:text="CALIBRATE"
-        android:onClick="calibrateRotationSensors"/>
+        android:text="START" />
+
+    <SeekBar
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:id="@+id/speedSeekBar"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="20dp"
+        android:max="255"/>
+    <SeekBar
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:id="@+id/angleSeekBar"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="20dp"
+        android:max="45"/>
+    <RadioGroup
+        android:id="@+id/speedGroup"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:weightSum="3">
+
+        <RadioButton
+            android:id="@+id/speedSlow"
+            android:text="SLOW"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:layout_weight="1"
+            android:checked="true"/>
+        <RadioButton
+            android:id="@+id/speedMedium"
+            android:text="MEDIUM"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:layout_weight="1"/>
+        <RadioButton
+            android:id="@+id/speedHigh"
+            android:text="HIGH"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:layout_weight="1"/>
+    </RadioGroup>
+
 </LinearLayout>

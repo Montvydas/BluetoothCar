@@ -200,7 +200,7 @@ public class BluetoothActivity extends AppCompatActivity  implements AdapterView
 
             //if pressed on paired device, connect to that device
 
-            Intent intent = new Intent(BluetoothActivity.this, GyroCarActivity.class);
+            Intent intent = new Intent(BluetoothActivity.this, CarActivity.class);
             intent.putExtra(DEVICE_ADDRESS, address);
             startActivity(intent);
         }

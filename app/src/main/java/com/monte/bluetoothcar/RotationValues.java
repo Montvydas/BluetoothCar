@@ -5,6 +5,7 @@ import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
+import android.util.Log;
 import android.view.View;
 import android.widget.Toast;
 
@@ -22,7 +23,7 @@ public class RotationValues implements SensorEventListener{
 
     public RotationValues (Context context){
         this.context = context; //first need to get context
-        initialiseSensors ();   //then use it to initialise sensors
+        initialiseSensors();   //then use it to initialise sensors
     }
 
     public float getYaw() {
@@ -39,8 +40,8 @@ public class RotationValues implements SensorEventListener{
         mSensorManager = (SensorManager) context.getSystemService(Context.SENSOR_SERVICE);  //Sensor manager service
         rSensor = mSensorManager.getDefaultSensor(Sensor.TYPE_GAME_ROTATION_VECTOR);//used for showing the rotation on each axis
     }
-
     float [] rawRotationValues;
+
     @Override
     public void onSensorChanged(SensorEvent event) {
         switch (event.sensor.getType()){
@@ -67,6 +68,7 @@ public class RotationValues implements SensorEventListener{
         yaw   = rawYaw * 180/PI + yawOffset;
         pitch = rawPitch * 180/PI + pitchOffset;    //in degrees
         roll  = rawRoll * 180/PI + rollOffset;
+//        Log.e("values", "pitch= " + pitch + " roll= " + roll);
     }
     private double mod(double a, double b){ //functions calculates the mod
         return a % b;
@@ -98,7 +100,7 @@ public class RotationValues implements SensorEventListener{
     public void unregisterListener (){
         mSensorManager.unregisterListener(this);
     }
-    public void registerListener (int delayValue){
-        mSensorManager.registerListener(this, rSensor, delayValue);
+    public void registerListener (){
+        mSensorManager.registerListener(this, rSensor, SensorManager.SENSOR_DELAY_GAME);
     }
 }
