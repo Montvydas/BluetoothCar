@@ -97,13 +97,13 @@ public class CarActivity extends Activity {
             case MotionEvent.ACTION_MOVE:           //in the form of: x0.35 y0.54
 
                 if (event.getY()/HEIGHT < 0.3){
-                    sendResponse("red");
+                    sendResponse("red\n");
                     Log.e("colour=", "red");
                 } else if (event.getY()/HEIGHT < 0.7 && event.getY()/HEIGHT > 0.3){
-                    sendResponse("green");
+                    sendResponse("green\n");
                     Log.e("colour=", "green");
                 } else {
-                    sendResponse("blue");
+                    sendResponse("blue\n");
                     Log.e("colour=", "blue");
                 }
 

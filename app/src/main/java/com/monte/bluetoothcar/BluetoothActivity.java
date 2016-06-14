@@ -1,5 +1,6 @@
 package com.monte.bluetoothcar;
 
+import android.Manifest;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.content.Intent;
@@ -7,6 +8,8 @@ import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.provider.Settings;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.View;
@@ -36,6 +39,9 @@ public class BluetoothActivity extends AppCompatActivity  implements AdapterView
     final private int ACTIVITY_BLUETOOTH_ENABLE_CODE = 1;
     public static String DEVICE_ADDRESS = "com.monklu.bluetooth.deviceAddress";
 
+    private final int MY_PERMISSIONS_REQUEST_BLUETOOTH = 1;
+    private final int MY_PERMISSIONS_REQUEST_BLUETOOTH_ADMIN = 2;
+
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -43,6 +49,25 @@ public class BluetoothActivity extends AppCompatActivity  implements AdapterView
         this.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
 //        getActionBar().setDisplayShowHomeEnabled(false);
 //        getActionBar().setTitle("BluetoothCar!");
+
+        if (ContextCompat.checkSelfPermission(this,
+                Manifest.permission.BLUETOOTH)
+                != PackageManager.PERMISSION_GRANTED) {
+
+            ActivityCompat.requestPermissions(this,
+                    new String[]{Manifest.permission.BLUETOOTH},
+                    MY_PERMISSIONS_REQUEST_BLUETOOTH);
+        }
+
+        if (ContextCompat.checkSelfPermission(this,
+                Manifest.permission.BLUETOOTH_ADMIN)
+                != PackageManager.PERMISSION_GRANTED) {
+
+            ActivityCompat.requestPermissions(this,
+                    new String[]{Manifest.permission.BLUETOOTH_ADMIN},
+                    MY_PERMISSIONS_REQUEST_BLUETOOTH_ADMIN);
+        }
+
 
         checkAndEnableBluetooth();
 
@@ -175,9 +200,48 @@ public class BluetoothActivity extends AppCompatActivity  implements AdapterView
 
             //if pressed on paired device, connect to that device
 
-            Intent intent = new Intent(BluetoothActivity.this, CarActivity.class);
+            Intent intent = new Intent(BluetoothActivity.this, GyroCarActivity.class);
             intent.putExtra(DEVICE_ADDRESS, address);
             startActivity(intent);
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode,
+                                           String permissions[], int[] grantResults) {
+        switch (requestCode) {
+            case MY_PERMISSIONS_REQUEST_BLUETOOTH: {
+                // If request is cancelled, the result arrays are empty.
+                if (grantResults.length > 0
+                        && grantResults[0] != PackageManager.PERMISSION_GRANTED) {
+
+                    Toast.makeText(getApplicationContext(), "You need Bluetooth for this App!", Toast.LENGTH_SHORT).show();
+                    try {
+                        Thread.sleep(1000);
+                        finish();
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+                return;
+            }
+            case MY_PERMISSIONS_REQUEST_BLUETOOTH_ADMIN: {
+                if (grantResults.length > 0
+                        && grantResults[0] != PackageManager.PERMISSION_GRANTED) {
+
+                    Toast.makeText(getApplicationContext(), "You need Bluetooth for this App!", Toast.LENGTH_SHORT).show();
+                    try {
+                        Thread.sleep(1000);
+                        finish();
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+                return;
+            }
+
+            // other 'case' lines to check for other
+            // permissions this app might request
         }
     }
 }
