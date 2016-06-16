@@ -5,6 +5,7 @@ import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.content.Intent;
 import android.content.pm.ActivityInfo;
+import android.graphics.Color;
 import android.os.Bundle;
 import android.os.Handler;
 import android.util.DisplayMetrics;
@@ -52,7 +53,7 @@ public class CarActivity extends Activity implements View.OnClickListener, Radio
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_gyro_car_landscape);              //set layout
-        this.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE); //always keep orientation in portrait
+//        this.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE); //always keep orientation in portrait
         getScreenSize();                                    //gets the WIDTH and HEIGHT
         initialiseBluetooth();
         initialiseViews();      //Bluetooth stuff
@@ -91,6 +92,7 @@ public class CarActivity extends Activity implements View.OnClickListener, Radio
     protected void onResume() {
         super.onResume();
 
+        initialiseBluetooth();
         myRotations.registerListener();
         initialiseSender();
 
@@ -127,7 +129,8 @@ public class CarActivity extends Activity implements View.OnClickListener, Radio
             if (mmManagegedConnection == null) {
                 mmManagegedConnection = new ManageConnectedThread(connectThread.getSocket());   //get bluetooth socket
             }
-            mmManagegedConnection.write(sendWord);                                          //send the work
+            if (mmManagegedConnection != null)
+                mmManagegedConnection.write(sendWord);                                          //send the work
         }
         //mmManagegedConnection.write(string.getBytes(Charset.forName("UTF-8")));
     }
@@ -288,9 +291,11 @@ public class CarActivity extends Activity implements View.OnClickListener, Radio
                 if (enableCar){ //make the car stop
                     enableCar = false;
                     startButton.setText("START");
+                    startButton.setBackgroundResource(R.color.colorPrimary);
                 } else {
                     startButton.setText("STOP");
                     enableCar = true;
+                    startButton.setBackgroundResource(android.R.color.holo_red_dark);
                 }
                 break;
         }
@@ -319,8 +324,10 @@ public class CarActivity extends Activity implements View.OnClickListener, Radio
         switch (v.getId()){
             case R.id.driftButton:
                 if (event.getAction() == MotionEvent.ACTION_DOWN){
+                    driftButton.setBackgroundResource(android.R.color.holo_red_dark);
                     driftCar = true;
                 } else if (event.getAction() == MotionEvent.ACTION_UP){
+                    driftButton.setBackgroundResource(R.color.colorPrimary);
                     driftCar = false;
                 }
                 break;

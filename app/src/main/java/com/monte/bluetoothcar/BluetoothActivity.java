@@ -46,7 +46,8 @@ public class BluetoothActivity extends AppCompatActivity  implements AdapterView
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_bluetooth);
-        this.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
+//        this.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
+//        this.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE); //always keep orientation in portrait
 //        this.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
 //        getActionBar().setDisplayShowHomeEnabled(false);
 //        getActionBar().setTitle("BluetoothCar!");
@@ -204,6 +205,7 @@ public class BluetoothActivity extends AppCompatActivity  implements AdapterView
             Intent intent = new Intent(BluetoothActivity.this, CarActivity.class);
             intent.putExtra(DEVICE_ADDRESS, address);
             startActivity(intent);
+//            finish();
         }
     }
 
