@@ -73,7 +73,7 @@ public class ManageConnectedThread implements Runnable {
             // short tmp = (short) (input & 0xFF);
             byte bytes = (byte) (input&0xFF);
             mmOutStream.write(bytes);
-            Log.e("Send word int", "Int: " + input + ", Hex: 0x" + Integer.toHexString(input));
+//            Log.e("Send word int", "Int: " + input + ", Hex: 0x" + Integer.toHexString(input));
 //            Log.e("Send word bytes", "Int: " + bytes + ", Hex: 0x" + Integer.toHexString(bytes));
         } catch (IOException e) { }
     }

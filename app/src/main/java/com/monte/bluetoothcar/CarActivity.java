@@ -9,14 +9,13 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.util.DisplayMetrics;
 import android.util.Log;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.Button;
-import android.widget.CompoundButton;
 import android.widget.RadioGroup;
 import android.widget.SeekBar;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import java.util.UUID;
 
@@ -26,7 +25,7 @@ import bluetoothStuff.*;
 /**
  * Created by Monte on 24/02/16.
  */
-public class CarActivity extends Activity implements View.OnClickListener, RadioGroup.OnCheckedChangeListener{
+public class CarActivity extends Activity implements View.OnClickListener, RadioGroup.OnCheckedChangeListener, View.OnTouchListener{
 
     public BluetoothDevice device;                          //device to be connected to
     public ConnectThread connectThread;                     //connection thread
@@ -45,13 +44,15 @@ public class CarActivity extends Activity implements View.OnClickListener, Radio
     private SeekBar angleSeekBar;
 
     private Button startButton;
+    private Button driftButton;
+
     private RadioGroup speedGroup;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_gyro_car);              //set layout
-        this.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT); //always keep orientation in portrait
+        setContentView(R.layout.activity_gyro_car_landscape);              //set layout
+        this.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE); //always keep orientation in portrait
         getScreenSize();                                    //gets the WIDTH and HEIGHT
         initialiseBluetooth();
         initialiseViews();      //Bluetooth stuff
@@ -66,6 +67,9 @@ public class CarActivity extends Activity implements View.OnClickListener, Radio
 
         speedSeekBar = (SeekBar) findViewById(R.id.speedSeekBar);
         angleSeekBar= (SeekBar) findViewById(R.id.angleSeekBar);
+
+        driftButton = (Button) findViewById(R.id.driftButton);
+        driftButton.setOnTouchListener(this);
 
         startButton = (Button) findViewById(R.id.startButton);
         startButton.setOnClickListener(this);
@@ -95,8 +99,6 @@ public class CarActivity extends Activity implements View.OnClickListener, Radio
         connectThread = new ConnectThread(device, deviceUUID);
         connectThread.start();
     }
-
-
 
     //stop connection thread to save battery when application closed
     @Override
@@ -140,50 +142,53 @@ public class CarActivity extends Activity implements View.OnClickListener, Radio
         Log.e("HEIGHT=", HEIGHT + "");
     }
 
-//    //Magic is done in here!
-//    @Override
-//    public boolean onTouchEvent(MotionEvent event) {
-//        switch(event.getAction()){                  //listen for specific touch events
-//            case MotionEvent.ACTION_DOWN:           //if pressed down or moved, then send adjusted coordinates
-//                //return true;
-//            case MotionEvent.ACTION_MOVE:           //in the form of: x0.35 y0.54
-//
-//                if (event.getY()/HEIGHT < 0.3){
-//                    sendResponse("red\n");
-//                    Log.e("colour=", "red");
-//                } else if (event.getY()/HEIGHT < 0.7 && event.getY()/HEIGHT > 0.3){
-//                    sendResponse("green\n");
-//                    Log.e("colour=", "green");
-//                } else {
-//                    sendResponse("blue\n");
-//                    Log.e("colour=", "blue");
-//                }
-//
+    /*
+    //Magic is done in here!
+    @Override
+    public boolean onTouchEvent(MotionEvent event) {
+        switch(event.getAction()){                  //listen for specific touch events
+            case MotionEvent.ACTION_DOWN:           //if pressed down or moved, then send adjusted coordinates
+                //return true;
+            case MotionEvent.ACTION_MOVE:           //in the form of: x0.35 y0.54
+
+                if (event.getY()/HEIGHT < 0.3){
+                    sendResponse("red\n");
+                    Log.e("colour=", "red");
+                } else if (event.getY()/HEIGHT < 0.7 && event.getY()/HEIGHT > 0.3){
+                    sendResponse("green\n");
+                    Log.e("colour=", "green");
+                } else {
+                    sendResponse("blue\n");
+                    Log.e("colour=", "blue");
+                }
+
+
 //                String message = String.format("x%4.2fy%4.2f\n", event.getX()/WIDTH, event.getY()/HEIGHT);
 //                Log.e(":)", message);               //output this on Logcat
-////                sendResponse(message);              //send through bluetooth
-//                break;
-//            case MotionEvent.ACTION_UP:
+//                sendResponse(message);              //send through bluetooth
+                break;
+            case MotionEvent.ACTION_UP:
 //                message = "x0.00y0.00\n";
-////                message = "x0.00";
+//                message = "x0.00";
 //                Log.e(":)", message);               //output this on Logcat
-////                sendResponse(message);              //send through bluetooth
-//               // return false;
-////                message = "y0.00";
-////                sendResponse(message);
-//                break;
-//        }
-//        return super.onTouchEvent(event);
-//    }
-
-
-    private int direction = 0;
+//                sendResponse(message);              //send through bluetooth
+               // return false;
+//                message = "y0.00";
+//                sendResponse(message);
+                break;
+        }
+        return super.onTouchEvent(event);
+    }
+*/
+    private boolean prevDirection = true;
+    private boolean direction = false;
     private int speed = 0;  //0 - 255
     private int angle = 112;  //90 - 135
+    private int countBrakeLoops = 0;
 
     private void initialiseSender (){
         final Handler handler = new Handler();
-        final int delay = 20; //milliseconds
+        final int delay = 40; //milliseconds
 
         handler.postDelayed(new Runnable() {
             public void run() {
@@ -199,9 +204,23 @@ public class CarActivity extends Activity implements View.OnClickListener, Radio
 
                 if (positionY >= 220 && positionY <= 340) {
                     if (positionY >= 280.0)
-                        direction = 1;
+                        prevDirection = true;
                     else
-                        direction = 0;
+                        prevDirection = false;
+                }
+
+                if (driftCar){
+                    direction = !prevDirection;
+                    countBrakeLoops++;
+                    if (countBrakeLoops == 10)
+                        driftCar = false;
+                } else {
+                    countBrakeLoops = 0;
+                    direction = prevDirection;
+                }
+
+
+                if (positionY >= 220 && positionY <= 340) {
                     speed = (int) (Math.abs(positionY - 280) / 60.0 * maxSpeed);
                 } else {
                     speed = maxSpeed;
@@ -209,15 +228,15 @@ public class CarActivity extends Activity implements View.OnClickListener, Radio
 
                 // Set the angle
                 if (positionX <= 90) {
-                    if (positionX <= 45)    //90˚ - 112.5˚
-                        angle = (int) (112.5 + positionX / 2);
+                    if (positionX <= 45)
+                        angle = (int) (112.5 + positionX / 2);      //112.5˚ - 135˚
                     else
                         angle = 135;
                 }
 
                 if (positionX >= 270) {
                     if (positionX >= 315)
-                        angle = (int) (90 + (positionX - 315) / 2);  //112.5˚ - 135˚
+                        angle = (int) (90 + (positionX - 315) / 2);  //90˚ - 112.5˚
                     else
                         angle = 90;
                 }
@@ -228,12 +247,12 @@ public class CarActivity extends Activity implements View.OnClickListener, Radio
                 if (!enableCar) {
                     speed = 0;
                     angle = 112;
-                    direction = 1;
+                    direction = true;
                 }
 
                 // Set direction: 1 forward, 0 backward
                 int val = 0;
-                if (direction == 1) {
+                if (direction) {
                     val |= 0x80;
                 }
 
@@ -248,7 +267,6 @@ public class CarActivity extends Activity implements View.OnClickListener, Radio
                     val = val & 0xf0;
                 }
 
-//                Log.e("speed", speed + "");
                 if (connectThread.getSocket() == null) {
                     finish();
                 }
@@ -262,6 +280,7 @@ public class CarActivity extends Activity implements View.OnClickListener, Radio
     }
 
     private boolean enableCar = false;
+
     @Override
     public void onClick(View v) {
         switch (v.getId()){
@@ -282,15 +301,30 @@ public class CarActivity extends Activity implements View.OnClickListener, Radio
     public void onCheckedChanged(RadioGroup group, int checkedId) {
         switch (checkedId){
             case R.id.speedSlow:
-                maxSpeed = 150;
+                maxSpeed = 100;
                 break;
             case R.id.speedMedium:
-                maxSpeed = 200;
+                maxSpeed = 170;
                 break;
             case R.id.speedHigh:
                 maxSpeed = 250;
                 break;
         }
         Log.i("New Max Speed:", maxSpeed + "");
+    }
+
+    private boolean driftCar = false;
+    @Override
+    public boolean onTouch(View v, MotionEvent event) {
+        switch (v.getId()){
+            case R.id.driftButton:
+                if (event.getAction() == MotionEvent.ACTION_DOWN){
+                    driftCar = true;
+                } else if (event.getAction() == MotionEvent.ACTION_UP){
+                    driftCar = false;
+                }
+                break;
+        }
+        return false;
     }
 }
